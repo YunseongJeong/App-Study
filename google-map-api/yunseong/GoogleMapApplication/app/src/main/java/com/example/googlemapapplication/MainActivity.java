@@ -14,16 +14,19 @@ import android.os.Message;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -51,15 +54,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Button btn_toMyLocation;
 
     private EditText et_name;
-
+    private Button btnForDel;
     private Button btnForApply;
     private boolean isForApply = true;
     private LatLng latLngForMarker;
+
+    private Spinner spinner;
 
     GoogleMap map;
     private boolean onMarker = true;
     Marker marker;
     Marker markerForRetouch;
+    Marker markerForMake;
 
     private final static String TAG = "MainActivity.java";
 
@@ -68,6 +74,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private int mpHeight;
 
     private int lastY, curY;
+
+    private float colorCode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,21 +98,76 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         et_name = (EditText)findViewById(R.id.et_name);
 
+        spinner = (Spinner)findViewById(R.id.spinner);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                switch (parent.getItemAtPosition(position).toString()) {
+                    case "AZURE" :
+                        colorCode = 210.0f;
+                        break;
+                    case "BLUE" :
+                        colorCode = 240.0f;
+                        break;
+                    case "CYAN" :
+                        colorCode = 180.0f;
+                        break;
+                    case "GREEN" :
+                        colorCode = 120.0f;
+                        break;
+                    case "MAGENTA" :
+                        colorCode = 300.0f;
+                        break;
+                    case "ORANGE" :
+                        colorCode = 30.0f;
+                        break;
+                    case "RED" :
+                        colorCode = 0.0f;
+                        break;
+                    case "ROSE" :
+                        colorCode = 330.0f;
+                        break;
+                    case "VIOLET" :
+                        colorCode = 270.0f;
+                        break;
+                    case "YELLOW" :
+                        colorCode = 60.0f;
+                        break;
+                }
+                Log.d(TAG, "spinner:itemSelected" + colorCode);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
         btnForApply = (Button)findViewById(R.id.btnForApply);
         btnForApply.setOnClickListener(v -> {
             if (isForApply) {
                 if (et_name.getText().toString() == "") {
                     Toast.makeText(getApplicationContext(), "이름을 입력해주세요.", Toast.LENGTH_SHORT).show();
                 } else {
-                    MarkerOptions markerOptions = new MarkerOptions();
-                    markerOptions.title(et_name.getText().toString());
-                    markerOptions.position(latLngForMarker);
-                    map.addMarker(markerOptions);
+                    markerForMake.setTitle(et_name.getText().toString());
+                    markerForMake.setIcon(BitmapDescriptorFactory.defaultMarker(colorCode));
                     isForApply = false;
                     btnForApply.setText("수정");
+                    markerForRetouch = markerForMake;
+                    markerForMake = null;
                 }
             } else {
                 markerForRetouch.setTitle(et_name.getText().toString());
+                markerForRetouch.setIcon(BitmapDescriptorFactory.defaultMarker(colorCode));
+            }
+        });
+
+        btnForDel = (Button) findViewById(R.id.btnForDel);
+        btnForDel.setOnClickListener(v -> {
+            if (markerForMake != null){
+                markerForMake.remove();
+            } else {
+                markerForRetouch.remove();
             }
         });
 
@@ -160,16 +223,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onMapReady(@NonNull @org.jetbrains.annotations.NotNull GoogleMap googleMap) {
         LatLng location = new LatLng(35.231004, 129.082277); //지도에 marker을 만들기 위한 좌표
-
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.title("현위치");
         markerOptions.draggable(true);
         markerOptions.position(location);
-
         marker = googleMap.addMarker(markerOptions); //위에서 설정한 marker을 적용
-
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 16)); //marker 위치로 camera를 이동하고 줌함
-
         googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
             @Override
             public void onCameraMove() {
@@ -190,34 +249,42 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
-            public boolean onMarkerClick(Marker marker) { //질문
-                if (marker.getTitle().toString() != "현위치"){
-                    markerForRetouch = marker;
-                    et_name.setText(marker.getTitle());
-                    onMarker = false;
-                    btn_toMyLocation.setVisibility(View.VISIBLE);
-                } else  {
-                    onMarker = true;
-                    btn_toMyLocation.setVisibility(View.INVISIBLE);
-                }
-                googleMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(marker.getPosition().latitude, marker.getPosition().longitude)));
+            public boolean onMarkerClick(Marker marker) {
+                if (markerForMake == null){
+                    if (marker.getTitle().toString() != "현위치"){
+                        markerForRetouch = marker;
+                        et_name.setText(marker.getTitle());
 
-                return true;
+                        onMarker = false;
+                        btn_toMyLocation.setVisibility(View.VISIBLE);
+                    } else  {
+                        onMarker = true;
+                        btn_toMyLocation.setVisibility(View.INVISIBLE);
+                    }
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(marker.getPosition().latitude, marker.getPosition().longitude)));
+                    return true;
+                }
+                return false;
             }
         });
 
         googleMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
+                et_name.setText("");
                 googleMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
                 RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) linearLayout.getLayoutParams();
                 isForApply = true;
                 btnForApply.setText("생성");
-                layoutParams.setMargins(0, mpHeight/2+100, 0, 0);
+                layoutParams.setMargins(0, mpHeight - 300, 0, 0);
                 linearLayout.setLayoutParams(layoutParams);
                 btn_toMyLocation.setVisibility(View.VISIBLE);
                 onMarker = false;
                 latLngForMarker = latLng;
+                MarkerOptions markerOptions = new MarkerOptions();
+                markerOptions.title("생성 중");
+                markerOptions.position(latLngForMarker);
+                markerForMake = map.addMarker(markerOptions);
             }
         });
         map = googleMap;

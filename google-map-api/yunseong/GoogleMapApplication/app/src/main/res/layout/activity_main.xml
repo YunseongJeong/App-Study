@@ -47,11 +47,21 @@
             android:layout_marginTop="20dp"
             android:text="Color"
             android:textSize="30sp"/>
+        <Spinner
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/spinner"
+            android:entries="@array/color"/>
         <Button
             android:layout_marginTop="20dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="생성"
             android:id="@+id/btnForApply"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="삭제"
+            android:id="@+id/btnForDel"/>
     </LinearLayout>
 </RelativeLayout>
